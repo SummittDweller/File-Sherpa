@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #--------------------------------------------------------------------------------------
-# file_sherpa.py      Modified: Sunday, August 26, 2018 11:04 AM
+# file_sherpa.py      Modified: Sunday, August 26, 2018 11:14 AM
 #
 # If Pythonized...
 #
@@ -36,16 +36,14 @@ available_actions = ['test', 'email']
 
 Archived_EMail = '/Users/mark/_Archived_EMail_'
 PDF_Destination = '/Volumes/mark/Documents/consume'
-Attachment_Destination = '/Volumes/fileserver'
+Attachment_Destination = '/Volumes/files/STORAGE/_MAIL'
 
 import sys
 import argparse
-import socket
 import os
-import datetime
-import glob
-import pwd
-import grp
+import socket
+import shutil
+import time
 
 from colorama import init, Fore, Back, Style
 
@@ -63,7 +61,69 @@ def do_email( ):
   all_PDFs = []
   for dirpath, dirnames, filenames in os.walk(Archived_EMail):
     for filename in [f for f in filenames if f.endswith(".pdf")]:
-      all_PDFs.append(os.path.join(dirpath, filename)
+      all_PDFs.append(os.path.join(dirpath, filename))
+
+  moved = 0
+
+   # Move PDFs to PDF_Destination
+  for fullpath in all_PDFs:
+    filename = os.path.basename(fullpath)
+    newpath = "{0}/{1}".format(PDF_Destination, filename)
+    try:
+      dest = shutil.copy(fullpath, newpath)
+      if dest:
+        moved += 1
+        normal("{2}. PDF '{0}' was copied to '{1}'.".format(fullpath, dest, moved))
+        os.remove(fullpath)
+      else:
+        red("PDF '{0}' could not be copied to '{1}'.".format(fullpath, newpath))
+    except:
+      unexpected()
+      raise
+
+    # After moving 10 files, wait for paperless-consume to catch up (number of files in PDF_Destination stops decreasing)
+    if moved > 9:
+      path, dirs, files = next(os.walk(PDF_Destination))
+      previous = len(files)
+      time.sleep(1)
+      stalled = 0
+
+      while stalled < 50:
+        path, dirs, files = next(os.walk(PDF_Destination))
+        current = len(files)
+        if current < previous:
+          previous = current
+          stalled = 0
+          green('Consume process appears to be running.  {0} files left to process.'.format(current))
+        else:
+          stalled += 1
+
+      if stalled > 49:
+        magenta('Consume process appears to have stalled with {0} files remaining. Moving on.'.format(current))
+        moved = 0
+
+  # Build an rsync command to move all remaining contents (attachments) to Attachment_Destination
+  cmd = "rsync -aruvi --remove-source-files {0}/* {1}/ --progress".format(Archived_EMail, Attachment_Destination)
+  green("Moving attachments via: '{0}'".format(cmd))
+  try:
+    os.system(cmd)
+  except:
+    unexpected()
+    raise
+
+  # Now, remove any empty directories left behind.
+  folders = list(os.walk(Archived_EMail))[1:]
+
+  for folder in folders:
+    if not folder[2]:
+      try:
+        os.rmdir(folder[0])
+      except OSError as e:
+        magenta('An OSError occured: ' + str(e))
+      except:
+        unexpected()
+        raise
+
 
 #--------------------------------
 def do_test( ):
