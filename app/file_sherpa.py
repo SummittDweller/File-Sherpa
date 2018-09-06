@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #--------------------------------------------------------------------------------------
-# file_sherpa.py      Modified: Sunday, August 26, 2018 11:14 AM
+# file_sherpa.py      Modified: Wednesday, September 5, 2018 9:07 PM
 #
 # If Pythonized...
 #
@@ -30,9 +30,16 @@
 #--------------------------------------------------------------------------------------
 
 #--- Config data here ----------------
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 identify = "file-sherpa v{0}".format(VERSION)
 available_actions = ['test', 'email']
+
+with open('./app/file_sherpa.py', 'r') as inF:
+  for line in inF:
+    if 'Modified: ' in line:
+      trash, mod = line.split('Modified:', 2)
+      extra_info = "Modified: " + mod.strip()
+      break
 
 Archived_EMail = '/Users/mark/_Archived_EMail_'
 PDF_Destination = '/Volumes/mark/Documents/consume'
@@ -136,9 +143,9 @@ def do_test( ):
   try:
     found = os.path.isdir(Archived_EMail)
     if found:
-      green("The '{0}' exists!".format(Archived_EMail))
+      green("The '{0}' directory exists!".format(Archived_EMail))
     else:
-      red("The '{0}' does not currently exist!".format(Archived_EMail))
+      red("The '{0}' directory does not currently exist!".format(Archived_EMail))
       OK = False
   except:
     unexpected()
@@ -148,9 +155,9 @@ def do_test( ):
   try:
     found = os.path.isdir(PDF_Destination)
     if found:
-      green("The '{0}' exists!".format(PDF_Destination))
+      green("The '{0}' directory exists!".format(PDF_Destination))
     else:
-      red("The '{0}' does not currently exist!".format(PDF_Destination))
+      red("The '{0}' directory does not currently exist!".format(PDF_Destination))
       OK = False
   except:
     unexpected()
@@ -160,9 +167,9 @@ def do_test( ):
   try:
     found = os.path.isdir(Attachment_Destination)
     if found:
-      green("The '{0}' exists!".format(Attachment_Destination))
+      green("The '{0}' directory exists!".format(Attachment_Destination))
     else:
-      red("The '{0}' does not currently exist!".format(Attachment_Destination))
+      red("The '{0}' directory does not currently exist!".format(Attachment_Destination))
       OK = False
   except:
     unexpected()
@@ -255,6 +262,7 @@ if __name__ == "__main__":
   # Provide some feedback to the user
   arg_list = " ".join(sys.argv[1:])
   blue("{0} ({1}) called on {2} with arguments: {3}".format(identify, sys.argv[0], host, arg_list))
+  blue("  file_sherpa.py {0}".format(extra_info))
 
   # Ok, now we are ready to take 'action'.
   if args.action[0] not in available_actions:
